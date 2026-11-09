@@ -4,7 +4,7 @@
 
 **Advanced AI · Group Project II: *Exploring Style Transfer in Music Generation*** · IE University · 2026
 
-**Live demo:** <https://dvelascoherruzo.github.io/mindscape-genre-transfer/>
+**Live demo:** <https://dvelascoherruzo.github.io/Mindscape-genre-transfer/>
 
 ---
 
@@ -37,33 +37,33 @@ The first version targets **instrumental clips of about 30 s, transferred betwee
 | **M3**, style embeddings | Genre probe on frozen **CLAP / MERT** embeddings | Extracts style embeddings and scores every output |
 | Evaluation | Genre probe and CLAP score (target genre), chroma and beat agreement (same piece), KAD and Audiobox Aesthetics (quality), runtime, plus a listening test | Shown as trade-off curves over the strength setting |
 
-Details: [docs/PLANNING_SUMMARY.md](docs/PLANNING_SUMMARY.md) · evidence: [docs/LITERATURE_REVIEW_SHORT.md](docs/LITERATURE_REVIEW_SHORT.md)
+Details: [docs/PLANNING_SUMMARY.md](docs/PLANNING_SUMMARY.md) · evidence: [docs/LITERATURE_REVIEW.md](docs/LITERATURE_REVIEW.md)
 
 ## Repository layout
 
 ```
 .
-├── README.md                     ← you are here
-├── Advanced AI Project.md        ← the team's original project plan
-├── AGENTS.md                     ← instructions for AI coding assistants
+├── README.md                          ← you are here
 ├── docs/
-│   ├── LITERATURE_REVIEW_SHORT.md  ← main literature review (≈5.3k words, 84 refs)
-│   ├── LITERATURE_REVIEW.md        ← extended evidence version (157 refs)
-│   ├── LIT_REVIEW_SUMMARY.md       ← one-page team quick reference
-│   └── PLANNING_SUMMARY.md         ← plan v3: scope, training plan, timeline, risks
-├── site/                         ← static demo website (GitHub Pages)
+│   ├── Advanced AI Project.md         ← the team's original project plan
+│   ├── LITERATURE_REVIEW.md           ← main literature review (≈5.3k words, 84 refs)
+│   ├── LITERATURE_REVIEW_Extended.md  ← extended evidence version (157 refs)
+│   ├── LIT_REVIEW_SUMMARY.md          ← one-page team quick reference
+│   ├── PLANNING_SUMMARY.md            ← plan v3: scope, training plan, timeline, risks
+│   └── AGENTS.md                      ← instructions for AI coding assistants
+├── site/                              ← static demo website (GitHub Pages)
 │   ├── index.html, css/, js/
-│   ├── demo/manifest.json        ← list of demo tracks and model outputs
-│   └── README.md                 ← how to run it and how to add outputs
-└── .github/workflows/pages.yml   ← deploys site/ to GitHub Pages
+│   ├── demo/manifest.json             ← list of demo tracks and model outputs
+│   └── README.md                      ← how to run it and how to add outputs
+└── .github/workflows/pages.yml        ← deploys site/ to GitHub Pages on pushes to prod
 ```
 
 ## Documents
 
 | Document | For | Contents |
 |---|---|---|
-| [Literature review (short)](docs/LITERATURE_REVIEW_SHORT.md) | Graders, team | Architectures, five families of transfer technique with an evidence table, style embeddings, fine-tuning, content preservation, evaluation, data and ethics |
-| [Literature review (extended)](docs/LITERATURE_REVIEW.md) | Evidence | The full 157-reference survey behind the short review |
+| [Literature review](docs/LITERATURE_REVIEW.md) | Graders, team | Architectures, five families of transfer technique with an evidence table, style embeddings, fine-tuning, content preservation, evaluation, data and ethics |
+| [Literature review (extended)](docs/LITERATURE_REVIEW_Extended.md) | Evidence | The full 157-reference survey behind the main review |
 | [Literature review summary](docs/LIT_REVIEW_SUMMARY.md) | Team | Quick reference: key facts, tables, checklists |
 | [Plan v3](docs/PLANNING_SUMMARY.md) | Team | Honest scope assessment, MVP/should/stretch tiers, training plan for M1–M3, timeline, roles, risks |
 | [Demo site guide](site/README.md) | Developers | Running locally, layouts, adding model outputs, deep links |
@@ -94,4 +94,4 @@ Until our models produce outputs, the demo plays Grieg's *In the Hall of the Mou
 
 ## Acknowledgements
 
-This project builds on open research and tools including ACE-Step, Stable Audio, BigVGAN, LAION-CLAP, MERT, MusicNet, the Free Music Archive and MTG-Jamendo. Full references are in the [literature review](docs/LITERATURE_REVIEW_SHORT.md#references).
+This project builds on open research and tools including ACE-Step, Stable Audio, BigVGAN, LAION-CLAP, MERT, MusicNet, the Free Music Archive and MTG-Jamendo. Full references are in the [literature review](docs/LITERATURE_REVIEW.md#references).

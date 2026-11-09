@@ -4,9 +4,9 @@
 Last updated: 9 November 2026 · Phase: **Literature Review** · Time left: **10–14 weeks**
 Group: *[member names]* · Exact deadline: *[fill in]*
 
-> This is the team plan. It builds on our own plan in [`Advanced AI Project.md`](../Advanced%20AI%20Project.md), which is unchanged, and on the literature review:
-> - [LITERATURE_REVIEW_SHORT.md](LITERATURE_REVIEW_SHORT.md): the main deliverable, cited as "SR §x";
-> - [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md): the extended evidence;
+> This is the team plan. It builds on our own plan in [`Advanced AI Project.md`](Advanced%20AI%20Project.md), which is unchanged, and on the literature review:
+> - [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md): the main deliverable (the short review), cited as "SR §x";
+> - [LITERATURE_REVIEW_Extended.md](LITERATURE_REVIEW_Extended.md): the extended evidence, cited as "LR §x";
 > - [LIT_REVIEW_SUMMARY.md](LIT_REVIEW_SUMMARY.md): the quick reference.
 >
 > §3–§4 are the honest recommendations and the decisions taken on 9 Nov 2026. §13 lists the changes we could copy into `Advanced AI Project.md` if the group agrees.
@@ -286,11 +286,11 @@ Keep a **licence log** (file, source, licence, use). Store audio outside OneDriv
 ## 15. Documents & sources
 
 - `Group Project - Advanced_AI .pdf`: official brief (Project II).
-- [`Advanced AI Project.md`](../Advanced%20AI%20Project.md): our original plan.
-- [LITERATURE_REVIEW_SHORT.md](LITERATURE_REVIEW_SHORT.md): **main review** (≈5.3k words, 84 references, evidence table, brief-compliance table §1.5).
-- [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md): extended evidence (157 references).
+- [`Advanced AI Project.md`](Advanced%20AI%20Project.md): our original plan.
+- [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md): **main review** (≈5.3k words, 84 references, evidence table, brief-compliance table §1.5).
+- [LITERATURE_REVIEW_Extended.md](LITERATURE_REVIEW_Extended.md): extended evidence (157 references).
 - [LIT_REVIEW_SUMMARY.md](LIT_REVIEW_SUMMARY.md): quick reference.
-- [../AGENTS.md](../AGENTS.md): instructions for AI assistants.
+- [AGENTS.md](AGENTS.md): instructions for AI assistants.
 - Key links:
   - ACE-Step 1.5: https://github.com/ace-step/ACE-Step-1.5
   - Stable Audio 3: https://github.com/Stability-AI/stable-audio-3

@@ -1,8 +1,8 @@
 # Literature Review: Team Summary
 
-**Quick reference for [LITERATURE_REVIEW_SHORT.md](LITERATURE_REVIEW_SHORT.md) (v3)** · 9 November 2026
+**Quick reference for [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) (v3, the short review)** · 9 November 2026
 
-> Use this page day to day. "→ SR §x" points to the short review (the main deliverable). "→ LR §x" points to the [extended evidence version](LITERATURE_REVIEW.md). The plan and decisions are in [PLANNING_SUMMARY.md](PLANNING_SUMMARY.md).
+> Use this page day to day. "→ SR §x" points to the short review (the main deliverable). "→ LR §x" points to the [extended evidence version](LITERATURE_REVIEW_Extended.md). The plan and decisions are in [PLANNING_SUMMARY.md](PLANNING_SUMMARY.md).
 >
 > **Current scope:** instrumental clips (~30 s), **Classical ↔ Rock** first, Pop later. Main model **ACE-Step 1.5 Cover**. Trained models (all must-haves): **M1 mel-spectrogram autoencoder + vocoder**, **M2 LoRA per genre**, **M3 genre / style-embedding probe**. The demo site lives in `site/`.
 

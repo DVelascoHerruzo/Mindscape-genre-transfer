@@ -1,9 +1,9 @@
-# Publishes the static demo in site/ to GitHub Pages on every push to main that touches it.
+# Publishes the static demo in site/ to GitHub Pages on every push to prod that touches it.
 name: Deploy demo site to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [prod]
     paths:
       - "site/**"
       - ".github/workflows/pages.yml"

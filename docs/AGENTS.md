@@ -1,15 +1,16 @@
 # AGENTS.md: Genre-Transfer Web App (guide for AI agents)
 
-> Scope: everything under `Project/`. Read fully before acting. Last updated 2026-11-09.
-> **Ignore `../AGENTS.md`**: it belongs to Assignment I (YOLO object detection) and does not apply here, even if your harness auto-loads it.
+> Scope: this whole repository, i.e. the `Advanced AI Project/` folder (the git root). This file lives in `docs/`. Read fully before acting. Last updated 2026-11-09.
+> **Layout changed on 2026-11-09:** the project moved out of `Advanced AI/Project/` into its own folder, and the review files were renamed (see §1). Older notes and memories may still use the old paths. The status log (§9) keeps the old names as history.
+> The `AGENTS.md` in the sibling `Advanced AI/` folder belongs to Assignment I (YOLO object detection) and does not apply here.
 
 ---
 
 ## 0. TL;DR
 
 - **Project:** a web app where a user uploads a song (MP3/WAV) and changes its **genre** via a **text prompt** or **predefined style buttons**. Models: **guided diffusion** (Track A) and **autoencoder-style per genre / class models** (Track B). Start with **2–3 genres**.
-- **Source of truth for the plan:** `Advanced AI Project.md`, the team's own document. **Do not edit it unless the user asks.** Proposed changes live in `docs/PLANNING_SUMMARY.md` §4.
-- **Current phase (2026-11-09):** Literature Review. The primary deliverable is `docs/LITERATURE_REVIEW_SHORT.md` (v3). `docs/LITERATURE_REVIEW.md` (v2) is the extended evidence version.
+- **Source of truth for the plan:** `docs/Advanced AI Project.md`, the team's own document. **Do not edit it unless the user asks.** Proposed changes live in `docs/PLANNING_SUMMARY.md` §4 and §13.
+- **Current phase (2026-11-09):** Literature Review. The primary deliverable is `docs/LITERATURE_REVIEW.md` (v3.1, the short review, cited as "SR §x"). `docs/LITERATURE_REVIEW_Extended.md` (v2) is the extended evidence version (cited as "LR §x").
 - **Agreed scope (v3, 2026-11-09)**, detailed in `docs/PLANNING_SUMMARY.md` §3–4:
   - instrumental ~30 s clips, **Classical ↔ Rock** first (Pop later);
   - primary model **ACE-Step 1.5 Cover**, backup Stable Audio 3;
@@ -26,22 +27,27 @@
 
 ## 1. Document map
 
+All paths are relative to the repository root.
+
 | File | Owner / audience | Rules |
 |---|---|---|
-| `Advanced AI Project.md` | Team (likely exported from a shared doc) | Read-only for agents unless asked |
-| `docs/LITERATURE_REVIEW_SHORT.md` | Graders + team (**primary review, v3.1**) | ≈5.3k-word main body, 84 references, brief-compliance table (§1.5), evidence-graded table (§3.7). Keep it short. Keep the section numbering stable, because other docs cite "SR §x" |
-| `site/` | Demo website (static) | Plain HTML/CSS/JS, no build. Read `site/README.md` before editing. Real audio goes in `site/demo/` and is listed in `site/demo/manifest.json`. Never commit copyrighted audio |
-| `docs/LITERATURE_REVIEW.md` | Evidence (v2, extended) | Full 157-reference evidence base. Apply corrections only; don't expand. Other docs cite it as "LR §x" |
+| `README.md` | Public landing page of the GitHub repo | Keep its layout tree, document table and links in sync with this map |
+| `docs/Advanced AI Project.md` | Team (likely exported from a shared doc) | Read-only for agents unless asked |
+| `docs/LITERATURE_REVIEW.md` | Graders + team (**primary review, v3.1**; was `LITERATURE_REVIEW_SHORT.md` until 2026-11-09) | ≈5.3k-word main body, 84 references, brief-compliance table (§1.5), evidence-graded table (§3.7), models and tools in Appendix A. Keep it short. Keep the section numbering stable, because other docs cite "SR §x" |
+| `docs/LITERATURE_REVIEW_Extended.md` | Evidence (v2, extended; was `LITERATURE_REVIEW.md` until 2026-11-09) | Full 157-reference evidence base, model fact sheets in Appendix A. Apply corrections only; don't expand. Other docs cite it as "LR §x" |
 | `docs/LIT_REVIEW_SUMMARY.md` | Team (quick reference) | Condensed version of the review. **Update it whenever the full review changes**, and add no claims that aren't in the full review |
-| `docs/PLANNING_SUMMARY.md` | Team | Plan v2: mirrors `Advanced AI Project.md` + literature-driven proposals. Update it when plans change |
-| `AGENTS.md` | AI agents | Keep the status log (§9) current |
+| `docs/PLANNING_SUMMARY.md` | Team | Plan v3: mirrors `docs/Advanced AI Project.md` + literature-driven proposals. Update it when plans change |
+| `docs/AGENTS.md` | AI agents (this file) | Keep the status log (§9) current. It is not at the repo root, so harnesses that auto-load a root `AGENTS.md` won't find it; point them here |
+| `site/` | Demo website (static) | Plain HTML/CSS/JS, no build. Read `site/README.md` before editing. Real audio goes in `site/demo/` and is listed in `site/demo/manifest.json`. Never commit copyrighted audio |
+| `.github/workflows/pages.yml` | Deploys `site/` to GitHub Pages on pushes to **`prod`** that touch `site/**` (or manual dispatch) | Keep the trigger branch in sync with the team's deploy branch (see §3) |
+| `Mindscape-genre-transfer/` | Untracked stray folder: an empty clone of the repo (`.git` only, nothing checked out) | Not part of the project. Don't commit it or work in it; ask the user before deleting it |
 | `Group Project - Advanced_AI .pdf` (user's files, not in folder) | Brief | Project II = "Exploring Transfer Style in Music Generation". Deliverables: written document, code, presentation. Its sections 3 and 4 have headings copied from Project I; follow the bullet contents |
 
 ---
 
 ## 2. Verified technical facts (for planning and the web app)
 
-All facts below were checked on 2026-11-09. Details and citations are in LR Appendix A.
+All facts below were checked on 2026-11-09. Details and citations are in LR Appendix A (`docs/LITERATURE_REVIEW_Extended.md`) and SR Appendix A (`docs/LITERATURE_REVIEW.md`).
 
 | Model | Licence | Genre-transfer entry point | Hardware (vendor figures) |
 |---|---|---|---|
@@ -64,8 +70,9 @@ ACE-Step 1.5 ships a **Gradio UI** (`uv run acestep`, port 7860) and a **REST AP
 | OS / shell | Windows 11 Home; PowerShell 5.1 (no `&&`); Git Bash available |
 | GPU | NVIDIA RTX 3080, **10 GB**, driver 610.88; 32 GB RAM; ~190 GB free on C: |
 | Existing env | mamba env `advanced_ai`: Python 3.10, **torch 2.14.1+cpu (no CUDA)**. Don't use it for models and don't modify it |
-| Project path | Inside **OneDrive**, path has spaces. Quote paths and use `pathlib`. Keep audio, model weights and caches **outside OneDrive** (e.g., `C:\musicst\`), and point `HF_HOME` there |
-| Git | Repo `github.com/DVelascoHerruzo/mindscape-genre-transfer` (public, branch `main`, created 2026-11-09). GitHub Pages deploys `site/` via `.github/workflows/pages.yml` → <https://dvelascoherruzo.github.io/mindscape-genre-transfer/>. Ask before commits or pushes. Never commit data, weights or copyrighted audio (`.gitignore` covers them) |
+| Project path | `C:\Users\david\OneDrive\Documents\School\Advanced AI Project\` (own folder since 2026-11-09; the repo root). Inside **OneDrive**, path has spaces. Quote paths and use `pathlib`. Keep audio, model weights and caches **outside OneDrive** (e.g., `C:\musicst\`), and point `HF_HOME` there |
+| Git | Repo `github.com/DVelascoHerruzo/Mindscape-genre-transfer` (public). Initial commit `f180b9e` (2026-11-09, by the user). Remote branches (checked 2026-11-09): **`dev`** (default) and **`prod`**. The local branch is `master`, whose upstream `origin/master` no longer exists on the remote, so confirm with the user which branch to work on before committing. Ask before commits or pushes. Never commit data, weights or copyrighted audio (`.gitignore` covers them) |
+| GitHub Pages | **Not enabled** on the new repo (API 404 on 2026-11-09). The workflow now triggers on **`prod`** (changed locally 2026-11-09, uncommitted), but nothing deploys until (1) Pages is enabled in the repo settings with source "GitHub Actions" and (2) the workflow change reaches `prod`. URL once live (already in `README.md`): <https://dvelascoherruzo.github.io/Mindscape-genre-transfer/> |
 | Known risk | FlashAttention (Stable Audio 3 Medium) is hard to install on native Windows. Prefer ACE-Step first; WSL2 is the fallback |
 
 Ask the user before creating environments, installing packages or downloading models (several GB each).
@@ -102,7 +109,7 @@ Nice-to-haves (history, sharing, deletion, roles, showcase, deployment, testing,
 **Recommended approach** (LR §10):
 
 1. **Stack for live mode:** a small local Python server (FastAPI, or ACE-Step's own REST API behind an adapter) that the static site calls when `API_BASE` is set in `site/js/app.js`. No Gradio UI is needed, because the site is the UI.
-2. **Folder for live mode:** `Project/server/` with `app.py`, `backends/` (model adapters), `presets.yaml`, `requirements.txt`, `README.md`.
+2. **Folder for live mode:** `server/` at the repo root, with `app.py`, `backends/` (model adapters), `presets.yaml`, `requirements.txt`, `README.md`.
 3. **Adapter interface:** every model behind `transform(input_path, target: str | None, prompt: str | None, strength: float, seed: int | None) -> output_path`.
 4. **Build order:**
    - Build a **mock backend** first (returns the input, or a pitch-shifted or filtered copy) so the UI works without a GPU.
@@ -120,7 +127,7 @@ Nice-to-haves (history, sharing, deletion, roles, showcase, deployment, testing,
 
 1. Stay within the AI scope in §0. If a request implies model training, data pipelines or notebooks, confirm with the user first.
 2. Ask before installs, model downloads, `git` operations, sending audio to external APIs, and publishing anything.
-3. Don't edit `Advanced AI Project.md` or files outside `Project/` without being asked.
+3. Don't edit `docs/Advanced AI Project.md` or files outside this repository without being asked.
 4. **No unverified citations.** Verify new references (§6) and mark vendor-only claims as such.
 5. Use copyrighted songs only on the user's machine. Demo material should be the user's own or Creative Commons.
 6. Report honestly: if something fails, say so and show the output.
@@ -152,14 +159,16 @@ Nice-to-haves (history, sharing, deletion, roles, showcase, deployment, testing,
 - genres: Classical ↔ Rock first;
 - Track B: mel-AE + vocoder;
 - vocals: stretch goal;
-- web: Gradio MVP;
+- web: Gradio MVP (*superseded later the same day by the static demo site in `site/`*);
 - time left: 10–14 weeks.
 
 **Still open:**
 - exact deadline;
 - teammates' GPU specs;
 - roles;
-- whether to copy `docs/PLANNING_SUMMARY.md` §13 into `Advanced AI Project.md`.
+- whether to copy `docs/PLANNING_SUMMARY.md` §13 into `docs/Advanced AI Project.md`;
+- git workflow: which branch to work on (`dev`?), and what to do with the local `master` branch. Pages deploys from `prod` (user-approved 2026-11-09);
+- whether to delete the stray `Mindscape-genre-transfer/` folder.
 
 ---
 
@@ -191,3 +200,11 @@ Nice-to-haves (history, sharing, deletion, roles, showcase, deployment, testing,
   - Colour themes now follow the state: green/black (original, default start), black/white (Classical), red/black (Rock). All hardcoded purple/navy tints were removed.
   - The rock arrangement's melody moved from the lead guitar to a bass guitar; power chords went up an octave.
   - Verified with theme screenshots plus the phone and desktop tests; 0 errors. Not yet committed.
+- **2026-11-09 (later): repository reorganised by the user.**
+  - The project moved from `Advanced AI/Project/` to its own folder, `Advanced AI Project/`, which is now the git root. `AGENTS.md` and `Advanced AI Project.md` moved into `docs/`.
+  - New public repo `DVelascoHerruzo/Mindscape-genre-transfer` with branches `dev` (default) and `prod`. Initial commit `f180b9e` includes everything up to the colour-theme entry above.
+  - Review files renamed (uncommitted): the short review became `docs/LITERATURE_REVIEW.md`, and the extended one became `docs/LITERATURE_REVIEW_Extended.md`. The "SR"/"LR" citation labels are unchanged.
+  - This file was updated to the new layout.
+  - **Cross-links fixed** (at the user's request): `README.md` (layout tree, document table, links, Pages URL), `docs/PLANNING_SUMMARY.md`, `docs/LIT_REVIEW_SUMMARY.md`, and the companion/status notes at the top of both reviews. Links inside `docs/` are now same-folder links (e.g. `Advanced%20AI%20Project.md`, `AGENTS.md`).
+  - **Pages workflow** now triggers on `prod` instead of `main`. Pages itself still has to be enabled in the GitHub settings.
+  - **Nothing committed** (the user said not to commit).
