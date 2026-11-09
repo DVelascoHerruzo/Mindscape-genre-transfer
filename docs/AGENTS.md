@@ -39,7 +39,7 @@ All paths are relative to the repository root.
 | `docs/PLANNING_SUMMARY.md` | Team | Plan v3: mirrors `docs/Advanced AI Project.md` + literature-driven proposals. Update it when plans change |
 | `docs/AGENTS.md` | AI agents (this file) | Keep the status log (§9) current. It is not at the repo root, so harnesses that auto-load a root `AGENTS.md` won't find it; point them here |
 | `site/` | Demo website (static) | Plain HTML/CSS/JS, no build. Read `site/README.md` before editing. Real audio goes in `site/demo/` and is listed in `site/demo/manifest.json`. Never commit copyrighted audio |
-| `.github/workflows/pages.yml` | Deploys `site/` to GitHub Pages on pushes to **`prod`** that touch `site/**` (or manual dispatch) | Keep the trigger branch in sync with the team's deploy branch (see §3) |
+| `.github/workflows/pages.yml` | Deploys `site/` to GitHub Pages **only when a pull request into `prod` is merged** (user requirement, 2026-11-09). Runs on every push to `prod`; a `gate` job checks via the API that the pushed commit is a merged PR's `merge_commit_sha`, otherwise `deploy` is skipped with a notice. No build step, no path filter, no manual dispatch | Don't add other deploy triggers (e.g. `workflow_dispatch`, plain pushes) without asking. The static demo must stay deployable without model outputs |
 | `Mindscape-genre-transfer/` | Untracked stray folder: an empty clone of the repo (`.git` only, nothing checked out) | Not part of the project. Don't commit it or work in it; ask the user before deleting it |
 | `Group Project - Advanced_AI .pdf` (user's files, not in folder) | Brief | Project II = "Exploring Transfer Style in Music Generation". Deliverables: written document, code, presentation. Its sections 3 and 4 have headings copied from Project I; follow the bullet contents |
 
@@ -71,8 +71,8 @@ ACE-Step 1.5 ships a **Gradio UI** (`uv run acestep`, port 7860) and a **REST AP
 | GPU | NVIDIA RTX 3080, **10 GB**, driver 610.88; 32 GB RAM; ~190 GB free on C: |
 | Existing env | mamba env `advanced_ai`: Python 3.10, **torch 2.14.1+cpu (no CUDA)**. Don't use it for models and don't modify it |
 | Project path | `C:\Users\david\OneDrive\Documents\School\Advanced AI Project\` (own folder since 2026-11-09; the repo root). Inside **OneDrive**, path has spaces. Quote paths and use `pathlib`. Keep audio, model weights and caches **outside OneDrive** (e.g., `C:\musicst\`), and point `HF_HOME` there |
-| Git | Repo `github.com/DVelascoHerruzo/Mindscape-genre-transfer` (public). Initial commit `f180b9e` (2026-11-09, by the user). Remote branches (checked 2026-11-09): **`dev`** (default) and **`prod`**. The local branch is `master`, whose upstream `origin/master` no longer exists on the remote, so confirm with the user which branch to work on before committing. Ask before commits or pushes. Never commit data, weights or copyrighted audio (`.gitignore` covers them) |
-| GitHub Pages | **Not enabled** on the new repo (API 404 on 2026-11-09). The workflow now triggers on **`prod`** (changed locally 2026-11-09, uncommitted), but nothing deploys until (1) Pages is enabled in the repo settings with source "GitHub Actions" and (2) the workflow change reaches `prod`. URL once live (already in `README.md`): <https://dvelascoherruzo.github.io/Mindscape-genre-transfer/> |
+| Git | Repo `github.com/DVelascoHerruzo/Mindscape-genre-transfer` (public). Initial commit `f180b9e` (2026-11-09, by the user). Remote branches (checked 2026-11-09): **`dev`** (default) and **`prod`**. The user committed the rename/link fixes as `8f07c3c` ("Document Update") on `dev` and pushed it. They now work on a local feature branch, `Frontend`, branched from `dev`. Flow: feature branch → `dev` → PR into `prod` (which deploys). The local `master` is stale (its upstream no longer exists on the remote). Ask before commits or pushes. Never commit data, weights or copyrighted audio (`.gitignore` covers them) |
+| GitHub Pages | **Not enabled** on the new repo (API 404 on 2026-11-09). Deploys happen only on a **merged PR into `prod`** (workflow changed locally 2026-11-09, uncommitted and unpushed). Nothing deploys until (1) Pages is enabled with source "GitHub Actions", (2) the `github-pages` environment allows `prod` if its deployment branches are restricted, and (3) the new workflow reaches `prod` through a merged PR. Setup steps are in `site/README.md` ("Publish on GitHub Pages"). URL once live: <https://dvelascoherruzo.github.io/Mindscape-genre-transfer/> |
 | Known risk | FlashAttention (Stable Audio 3 Medium) is hard to install on native Windows. Prefer ACE-Step first; WSL2 is the fallback |
 
 Ask the user before creating environments, installing packages or downloading models (several GB each).
@@ -167,7 +167,7 @@ Nice-to-haves (history, sharing, deletion, roles, showcase, deployment, testing,
 - teammates' GPU specs;
 - roles;
 - whether to copy `docs/PLANNING_SUMMARY.md` §13 into `docs/Advanced AI Project.md`;
-- git workflow: which branch to work on (`dev`?), and what to do with the local `master` branch. Pages deploys from `prod` (user-approved 2026-11-09);
+- git: what to do with the stale local `master` branch. Pages deploys only from merged PRs into `prod` (user decision, 2026-11-09);
 - whether to delete the stray `Mindscape-genre-transfer/` folder.
 
 ---
@@ -208,3 +208,8 @@ Nice-to-haves (history, sharing, deletion, roles, showcase, deployment, testing,
   - **Cross-links fixed** (at the user's request): `README.md` (layout tree, document table, links, Pages URL), `docs/PLANNING_SUMMARY.md`, `docs/LIT_REVIEW_SUMMARY.md`, and the companion/status notes at the top of both reviews. Links inside `docs/` are now same-folder links (e.g. `Advanced%20AI%20Project.md`, `AGENTS.md`).
   - **Pages workflow** now triggers on `prod` instead of `main`. Pages itself still has to be enabled in the GitHub settings.
   - **Nothing committed** (the user said not to commit).
+- **2026-11-09 (later): Pages deploys only on merged PRs into `prod`** (user request; "do not push").
+  - `pages.yml` rewritten: push to `prod` → `gate` job (looks for a closed PR into `prod` whose `merge_commit_sha` equals the pushed SHA, retrying 3 times) → `deploy` job only if found. Removed the `site/**` path filter and `workflow_dispatch`. The static site is uploaded as it is, so the synth-only demo deploys now.
+  - Why not `on: pull_request: types: [closed]`: those runs use the PR merge ref, which can clash with the `github-pages` environment's branch rules. Why not the `commits/{sha}/pulls` endpoint: it only finds merged PRs for commits on the default branch (`dev`).
+  - Verified: the YAML parses (PyYAML); the gate script was dry-run against real API data. It found the PR for a real merge commit (actions/deploy-pages PR #440 with `base=main`), and it skipped with a notice for a fake SHA and for our repo (no PRs yet).
+  - Docs updated: `site/README.md` (publish steps + one-time settings), `README.md`. Nothing committed or pushed; no GitHub settings changed.

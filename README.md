@@ -55,7 +55,7 @@ Details: [docs/PLANNING_SUMMARY.md](docs/PLANNING_SUMMARY.md) · evidence: [docs
 │   ├── index.html, css/, js/
 │   ├── demo/manifest.json             ← list of demo tracks and model outputs
 │   └── README.md                      ← how to run it and how to add outputs
-└── .github/workflows/pages.yml        ← deploys site/ to GitHub Pages on pushes to prod
+└── .github/workflows/pages.yml        ← deploys site/ to GitHub Pages when a PR into prod is merged
 ```
 
 ## Documents
@@ -79,6 +79,8 @@ python -m http.server 8000
 You can also just open `site/index.html`. It falls back to the built-in preview track. The site works on phones (tabs and a slide-up sheet) and on desktops (a three-column layout at ≥ 1100 px).
 
 Until our models produce outputs, the demo plays Grieg's *In the Hall of the Mountain King* (1875, public domain), **synthesised in the browser** in three synchronised arrangements (plain, classical, rock). This shows the interaction; it is not a model output. To add real outputs, see [site/README.md](site/README.md#adding-real-model-outputs).
+
+The public demo is redeployed automatically each time a pull request into `prod` is merged. Direct pushes to `prod` don't deploy. See [site/README.md](site/README.md#publish-on-github-pages).
 
 ## Data, audio and licensing
 
