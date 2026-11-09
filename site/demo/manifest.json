@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "about": "Tracks shown on the Mindscape demo site. Add real model outputs here (format: site/README.md). The synth track is generated in the browser and needs no files.",
+  "tracks": [
+    {
+      "id": "mountain-king",
+      "type": "synth",
+      "title": "In the Hall of the Mountain King",
+      "artist": "E. Grieg · browser preview",
+      "length": "16 s loop",
+      "license": "Public-domain composition (Grieg, Peer Gynt, 1875), synthesised live in your browser. Not a model output."
+    }
+  ]
+}

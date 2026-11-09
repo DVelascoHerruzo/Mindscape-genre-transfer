@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mindscape · Genre Transfer</title>
+  <meta name="description" content="Re-imagine a piece of music in another genre. Demo for the Advanced AI group project on music style transfer.">
+  <meta name="theme-color" content="#030604">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='.45' stop-color='%232ee59d'/%3E%3Cstop offset='1' stop-color='%23031a10'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='28' fill='url(%23g)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <main class="app" id="app">
+    <!-- Top bar -->
+    <header class="topbar">
+      <button class="icon-btn glass" id="menuBtn" type="button" aria-label="How it works">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+        <span class="desk-label" aria-hidden="true">How it works</span>
+      </button>
+      <div class="now-playing glass">
+        <div class="np-viewport">
+          <span class="np-text" id="npText"><span class="np-label">Now playing&nbsp;·&nbsp;</span><span id="npTrack">Loading…</span></span>
+        </div>
+      </div>
+      <div class="brand">
+        <span class="brand-orb" aria-hidden="true"></span>
+        <h1 class="brand-text">Mindscape <small>Genre transfer demo</small></h1>
+      </div>
+    </header>
+
+    <!-- Transport -->
+    <section class="transport" aria-label="Playback controls">
+      <button class="icon-btn glass" id="favBtn" type="button" aria-label="Favourite this track" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path class="heart" d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10C19.5 15.4 12 20 12 20z"/></svg>
+      </button>
+      <div class="transport-center">
+        <div class="transport-pill glass">
+          <button class="icon-btn bare" id="prevBtn" type="button" aria-label="Previous track">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="6" width="2.2" height="12" rx="1"/><path d="M18.5 6.6v10.8a.8.8 0 0 1-1.25.66L9.5 12.66a.8.8 0 0 1 0-1.32l7.75-5.4a.8.8 0 0 1 1.25.66z"/></svg>
+          </button>
+          <button class="icon-btn bare" id="nextBtn" type="button" aria-label="Next track">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="16.8" y="6" width="2.2" height="12" rx="1"/><path d="M5.5 6.6v10.8a.8.8 0 0 0 1.25.66l7.75-5.4a.8.8 0 0 0 0-1.32L6.75 5.94a.8.8 0 0 0-1.25.66z"/></svg>
+          </button>
+        </div>
+        <button class="play-orb" id="playBtn" type="button" aria-label="Play">
+          <span class="orb-ring" aria-hidden="true"></span>
+          <svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4a1 1 0 0 0 1.52.85l9.9-6.2a1 1 0 0 0 0-1.7l-9.9-6.2a1 1 0 0 0-1.52.85z"/></svg>
+          <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5.5" width="4" height="13" rx="1.2"/><rect x="13.5" y="5.5" width="4" height="13" rx="1.2"/></svg>
+        </button>
+      </div>
+      <button class="icon-btn glass" id="queueBtn" type="button" aria-label="Show tracks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h12M4 12h12M4 17h7"/><path d="M15.5 14.5v5l4-2.5z" fill="currentColor" stroke="none"/></svg>
+      </button>
+    </section>
+
+    <!-- Tabs -->
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-style" aria-selected="true" aria-controls="panel-style" type="button">Style &amp; Strength</button>
+      <button class="tab" role="tab" id="tab-tracks" aria-selected="false" aria-controls="panel-tracks" type="button" tabindex="-1">Tracks</button>
+      <button class="tab" role="tab" id="tab-about" aria-selected="false" aria-controls="panel-about" type="button" tabindex="-1">How it works</button>
+      <span class="tab-indicator" id="tabIndicator" aria-hidden="true"></span>
+    </nav>
+
+    <div class="panels">
+      <!-- Style & strength -->
+      <section class="panel is-active" id="panel-style" role="tabpanel" aria-labelledby="tab-style">
+        <div class="wheel-wrap">
+          <div class="wheel-disc" aria-hidden="true"></div>
+          <svg class="wheel" id="wheel" viewBox="-200 -200 400 400" role="group" aria-label="Style wheel. The outer ring picks the genre, the inner ring the strength, the centre switches between original and styled."></svg>
+          <button class="icon-btn glass side side-tl" id="uploadBtn" type="button" aria-label="Upload an audio clip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4.5M7.5 9 12 4.5 16.5 9"/><path d="M4.5 14.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+          <button class="icon-btn glass side side-tr" id="promptBtn" type="button" aria-label="Describe a custom style">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5h4l10-10-4-4-10 10z"/><path d="M13 7l4 4"/></svg>
+          </button>
+          <button class="icon-btn glass side side-bl ab-btn" id="abBtn" type="button" aria-label="Compare with the original" aria-pressed="false"><span>A/B</span></button>
+          <button class="icon-btn glass side side-br" id="infoBtn" type="button" aria-label="About this output">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5c-1.8-1.4-4.3-1.9-7.5-1.5v13c3.2-.4 5.7.1 7.5 1.5 1.8-1.4 4.3-1.9 7.5-1.5V5c-3.2-.4-5.7.1-7.5 1.5z"/><path d="M12 6.5v13"/></svg>
+          </button>
+        </div>
+
+        <div class="sliders">
+          <div class="slider" data-kind="strength">
+            <div class="slider-head"><label for="strength">Strength</label><output id="strengthOut" for="strength">Balanced</output></div>
+            <input type="range" id="strength" min="0" max="100" value="55" step="1">
+            <div class="slider-scale" aria-hidden="true"><span>Faithful</span><span>Balanced</span><span>Transformed</span></div>
+          </div>
+          <div class="slider" data-kind="mood">
+            <div class="slider-head"><label for="mood">Mood</label><output id="moodOut" for="mood">Neutral</output></div>
+            <input type="range" id="mood" min="0" max="100" value="50" step="1">
+            <div class="slider-scale" aria-hidden="true"><span>Dark</span><span>Neutral</span><span>Bright</span></div>
+          </div>
+        </div>
+        <p class="stage-hint desk-only">Tap the centre of the wheel to compare with the original · <kbd>Space</kbd> plays and pauses</p>
+      </section>
+
+      <!-- Tracks -->
+      <section class="panel" id="panel-tracks" role="tabpanel" aria-labelledby="tab-tracks" inert>
+        <h2 class="col-title desk-only">Library</h2>
+        <ul class="track-list" id="trackList"></ul>
+        <p class="panel-note">Uploads stay in your browser. Until the local model server is connected, an upload plays as the original.</p>
+      </section>
+
+      <!-- How it works -->
+      <section class="panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about" inert>
+        <button class="icon-btn glass about-close desk-only" id="aboutClose" type="button" aria-label="Close how it works">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+        <article class="card glass">
+          <h2>Re-imagine a piece in another genre</h2>
+          <p>Pick a genre on the outer ring and choose how far to go with the inner ring or the Strength slider. Tap the centre to switch between the original and the styled version. Playback keeps its place when you switch.</p>
+        </article>
+        <ol class="steps">
+          <li class="step glass"><span class="step-n">1</span><span class="step-t">Upload</span><span class="step-d">~30 s instrumental clip</span></li>
+          <li class="step glass"><span class="step-n">2</span><span class="step-t">Analyse</span><span class="step-d">tempo, key, melody</span></li>
+          <li class="step glass"><span class="step-n">3</span><span class="step-t">Transform</span><span class="step-d">diffusion + genre adapters</span></li>
+          <li class="step glass"><span class="step-n">4</span><span class="step-t">Evaluate</span><span class="step-d">genre, melody, quality</span></li>
+        </ol>
+        <article class="card glass">
+          <h3>Models in the project</h3>
+          <ul class="model-list">
+            <li><strong>ACE-Step 1.5 Cover</strong>: a pre-trained diffusion transformer. Strength sets how much of the original structure it keeps.</li>
+            <li><strong>LoRA adapters (M2)</strong>: one small adapter per genre, trained on our classical and rock clips.</li>
+            <li><strong>Mel-AE (M1)</strong>: our autoencoder, with a shared encoder, one decoder per genre and a BigVGAN vocoder.</li>
+            <li><strong>Style probe (M3)</strong>: a genre classifier on CLAP / MERT embeddings that scores every output.</li>
+          </ul>
+        </article>
+        <article class="card glass">
+          <h3>About this demo</h3>
+          <p>Until our models produce outputs, the <em>In the Hall of the Mountain King</em> track (Grieg, 1875, public domain) is synthesised live in your browser to show how style switching works. It is not a model output. Mood currently shapes the tone in the browser; in the full system it becomes part of the prompt.</p>
+          <p class="muted">Advanced AI · Group Project II: Exploring Style Transfer in Music Generation · IE University · 2026</p>
+        </article>
+      </section>
+    </div>
+
+    <button class="sheet-handle" id="sheetBtn" type="button" aria-label="Compare models" aria-expanded="false" aria-controls="sheet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+    </button>
+
+    <div class="sheet glass" id="sheet" role="region" aria-label="Compare models" aria-hidden="true" inert>
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <h2 class="col-title desk-only">Listen &amp; compare</h2>
+      <div class="sheet-row">
+        <h2 class="sheet-title">Listen to</h2>
+        <div class="segmented" role="radiogroup" aria-label="Original or styled">
+          <button type="button" role="radio" data-ab="original" aria-checked="false">Original</button>
+          <button type="button" role="radio" data-ab="styled" aria-checked="true">Styled</button>
+        </div>
+      </div>
+      <div class="stat-row desk-only">
+        <div class="stat">
+          <span class="stat-k">Strength</span>
+          <span class="stat-v" id="statStrength">55%</span>
+          <span class="stat-sub" id="statPreset">Balanced</span>
+          <span class="stat-ring" id="statRing" aria-hidden="true"></span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Hearing</span>
+          <span class="stat-v" id="statGenre">Classical</span>
+          <span class="stat-sub" id="statMode">Styled version</span>
+        </div>
+      </div>
+      <h2 class="sheet-title">Model</h2>
+      <div class="model-pills" id="modelPills" role="radiogroup" aria-label="Model"></div>
+      <p class="sheet-note" id="modelNote"></p>
+      <dl class="details desk-only">
+        <div><dt>Track</dt><dd id="dTrack">—</dd></div>
+        <div><dt>Mood</dt><dd id="dMood">Neutral</dd></div>
+        <div><dt>Source</dt><dd id="dSource">—</dd></div>
+      </dl>
+      <p class="disclosure"><span class="dot" aria-hidden="true"></span>Styled audio is AI-generated. Uploads never leave your browser.</p>
+    </div>
+
+    <div class="scrim" id="scrim" aria-hidden="true"></div>
+    <div class="toast glass" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <p class="site-foot">Mindscape · genre-transfer demo · Advanced AI Group Project II</p>
+
+  <dialog class="dialog glass" id="promptDialog" aria-labelledby="promptTitle">
+    <form method="dialog">
+      <h2 id="promptTitle">Describe the style</h2>
+      <p class="dialog-sub">For example: “warm string quartet in a concert hall” or “gritty garage rock, live drums”.</p>
+      <textarea id="promptText" rows="3" maxlength="300" placeholder="Your style prompt…"></textarea>
+      <p class="dialog-hint">In live mode, prompts are sent to the model server. In this demo they are kept for this session.</p>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" value="cancel" type="submit">Cancel</button>
+        <button class="btn btn-primary" value="save" type="submit">Save prompt</button>
+      </div>
+    </form>
+  </dialog>
+  <input type="file" id="fileInput" accept="audio/*" hidden>
+
+  <script src="js/background.js"></script>
+  <script src="js/audio-core.js"></script>
+  <script src="js/synth.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/wheel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

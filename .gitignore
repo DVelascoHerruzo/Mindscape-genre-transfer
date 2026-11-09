@@ -1,0 +1,32 @@
+# Python / notebooks
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+# Data, model weights and audio stay out of git (see docs/PLANNING_SUMMARY.md §7)
+data/
+runs/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.mid
+*.midi
+# ...except published demo outputs (own or Creative Commons sources only, credited in the manifest)
+!site/demo/audio/**
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+*.tmp
