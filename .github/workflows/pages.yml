@@ -1,26 +1,66 @@
-# Publishes the static demo in site/ to GitHub Pages on every push to prod that touches it.
+# Publishes the static demo in site/ to GitHub Pages, but ONLY when a pull request into prod is merged.
+#
+# How it works:
+#   1. Every push to prod starts this workflow (merging a PR is a push to prod).
+#   2. The "gate" job checks that the pushed commit is the merge commit of a merged PR whose base is prod.
+#      Direct pushes to prod fail that check, and the deploy job is skipped (a notice explains why).
+#   3. The "deploy" job uploads site/ exactly as it is and publishes it. There is no build step:
+#      the static demo (browser-synth preview + manifest) deploys even before any model outputs exist.
+#
+# One-time setup (repo settings): Settings -> Pages -> Source: "GitHub Actions", and
+# Settings -> Environments -> github-pages -> Deployment branches must allow "prod".
 name: Deploy demo site to GitHub Pages
 
 on:
   push:
     branches: [prod]
-    paths:
-      - "site/**"
-      - ".github/workflows/pages.yml"
-  workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  gate:
+    name: Check the push is a merged pull request
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      pr: ${{ steps.find.outputs.pr }}
+    steps:
+      - id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          pr=""
+          # Retry a few times in case the PR's merge state is not visible in the API yet.
+          for attempt in 1 2 3; do
+            pr=$(gh api "repos/$REPO/pulls?state=closed&base=prod&sort=updated&direction=desc&per_page=30" \
+              --jq "map(select(.merged_at != null and .merge_commit_sha == \"$SHA\")) | first | .number // empty")
+            if [ -n "$pr" ]; then break; fi
+            if [ "$attempt" -lt 3 ]; then sleep 10; fi
+          done
+          if [ -n "$pr" ]; then
+            echo "Commit $SHA is the merge of PR #$pr into prod: deploying the site."
+          else
+            echo "::notice title=Site not deployed::Commit $SHA was pushed to prod directly, not by merging a pull request. Open a PR into prod to publish the site."
+          fi
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy site/ to GitHub Pages
+    needs: gate
+    if: needs.gate.outputs.pr != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

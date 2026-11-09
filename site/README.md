@@ -111,11 +111,21 @@ All files of one track should have the **same length** (e.g. 30 s), so switching
 
 ## Publish on GitHub Pages
 
-GitHub Pages serves static files only. The models do not run there; the site plays the pre-rendered outputs listed in the manifest.
+GitHub Pages serves static files only. The models do not run there; the site plays the pre-rendered outputs listed in the manifest. Until those exist, it publishes the browser-synth preview, which needs no audio files, so the static demo can go live today.
 
-1. Push the project to a GitHub repository.
-2. **Settings → Pages → Build and deployment → Source: GitHub Actions.** Pick the *Static HTML* workflow and set its upload `path` to `site`.
-3. Check that the audio files referenced in the manifest are committed (and licensed for publication).
+**The site is published only when a pull request into `prod` is merged.** The workflow [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) runs on every push to `prod`, checks that the pushed commit is the merge of a pull request, and then uploads `site/` as it is (no build step). A direct push to `prod` does not deploy; the run shows a "Site not deployed" notice instead.
+
+To publish:
+
+1. Work on a branch (e.g. `dev`) and open a pull request into `prod`.
+2. Merge it. The *Deploy demo site to GitHub Pages* run appears under **Actions**, and its deploy job shows the live URL: <https://dvelascoherruzo.github.io/Mindscape-genre-transfer/>.
+3. If the PR adds audio, check that every file referenced in the manifest is committed (and licensed for publication).
+
+One-time setup in the repository settings:
+
+- **Settings → Pages → Build and deployment → Source: GitHub Actions.** Don't add a suggested workflow; ours is already in the repo.
+- **Settings → Environments → `github-pages`:** if *Deployment branches and tags* is restricted, add `prod`, or the deploy job is rejected.
+- *Optional:* a branch ruleset on `prod` that requires pull requests, so direct pushes are blocked rather than just not deployed.
 
 ## Live mode (later, local only)
 
