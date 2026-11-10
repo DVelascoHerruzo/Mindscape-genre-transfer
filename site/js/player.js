@@ -174,5 +174,6 @@
     pause,
     toggle,
     get playing() { return playing; },
+    get position() { return els[active].currentTime; }, // seconds into the current file
   };
 })();

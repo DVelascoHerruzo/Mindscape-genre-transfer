@@ -104,7 +104,7 @@
       <section class="panel" id="panel-tracks" role="tabpanel" aria-labelledby="tab-tracks" inert>
         <h2 class="col-title desk-only">Library</h2>
         <ul class="track-list" id="trackList"></ul>
-        <p class="panel-note">Uploads stay in your browser. Until the local model server is connected, an upload plays as the original.</p>
+        <p class="panel-note">Uploads stay in your browser: they are transcribed, re-arranged and rendered on this device. Up to 60 s; clear melodies and chords work best.</p>
       </section>
 
       <!-- How it works -->
@@ -114,26 +114,28 @@
         </button>
         <article class="card glass">
           <h2>Re-imagine a piece in another genre</h2>
-          <p>Pick a genre on the outer ring and choose how far to go with the inner ring or the Strength slider. Tap the centre to switch between the original and the styled version. Playback keeps its place when you switch.</p>
+          <p>Upload an MP3, pick a genre on the outer ring and choose how far to go with the inner ring or the Strength slider. Tap the centre to switch between the original and the styled version. Playback keeps its place when you switch.</p>
         </article>
         <ol class="steps">
-          <li class="step glass"><span class="step-n">1</span><span class="step-t">Upload</span><span class="step-d">~30 s instrumental clip</span></li>
-          <li class="step glass"><span class="step-n">2</span><span class="step-t">Analyse</span><span class="step-d">tempo, key, melody</span></li>
-          <li class="step glass"><span class="step-n">3</span><span class="step-t">Transform</span><span class="step-d">diffusion + genre adapters</span></li>
-          <li class="step glass"><span class="step-n">4</span><span class="step-t">Evaluate</span><span class="step-d">genre, melody, quality</span></li>
+          <li class="step glass"><span class="step-n">1</span><span class="step-t">MP3 → MIDI</span><span class="step-d">Basic Pitch transcription</span></li>
+          <li class="step glass"><span class="step-n">2</span><span class="step-t">Analyse</span><span class="step-d">beats, key, chords, melody</span></li>
+          <li class="step glass"><span class="step-n">3</span><span class="step-t">MIDI → genre</span><span class="step-d">arranger + Magenta models</span></li>
+          <li class="step glass"><span class="step-n">4</span><span class="step-t">MIDI → MP3</span><span class="step-d">soundfont render</span></li>
         </ol>
         <article class="card glass">
-          <h3>Models in the project</h3>
+          <h3>The pipeline (runs in your browser)</h3>
           <ul class="model-list">
-            <li><strong>ACE-Step 1.5 Cover</strong>: a pre-trained diffusion transformer. Strength sets how much of the original structure it keeps.</li>
-            <li><strong>LoRA adapters (M2)</strong>: one small adapter per genre, trained on our classical and rock clips.</li>
-            <li><strong>Mel-AE (M1)</strong>: our autoencoder, with a shared encoder, one decoder per genre and a BigVGAN vocoder.</li>
-            <li><strong>Style probe (M3)</strong>: a genre classifier on CLAP / MERT embeddings that scores every output.</li>
+            <li><strong>Basic Pitch</strong> (Spotify, pretrained): polyphonic transcription of the audio into MIDI notes.</li>
+            <li><strong>Analysis</strong>: beat tracking, key (Krumhansl–Kessler), one chord per beat (templates + Viterbi) and the melody line.</li>
+            <li><strong>Genre arranger</strong>: a recipe per genre re-writes the MIDI with its instruments, grooves, voicings and bass lines. <em>Subtle</em> re-orchestrates the transcription, <em>Balanced</em> keeps the melody over a new accompaniment, <em>Bold</em> adds AI-generated parts.</li>
+            <li><strong>Magenta models</strong> (Google, pretrained, used at Bold): Coconet harmonises the melody in Bach style (Classical, Ambient), DrumsRNN writes drum fills, GrooVAE humanises the groove, ImprovRNN answers the melody over the chords (Jazz).</li>
+            <li><strong>Renderer</strong>: FluidR3_GM soundfont samples, synthesised drums and genre effects, rendered offline and matched in loudness to your clip. Download it as MP3 or MIDI.</li>
           </ul>
         </article>
         <article class="card glass">
           <h3>About this demo</h3>
-          <p>Until our models produce outputs, the <em>In the Hall of the Mountain King</em> track (Grieg, 1875, public domain) is synthesised live in your browser to show how style switching works. It is not a model output. Mood currently shapes the tone in the browser; in the full system it becomes part of the prompt.</p>
+          <p>The <em>In the Hall of the Mountain King</em> preview (Grieg, 1875, public domain) is synthesised live in your browser in Classical and Rock arrangements; it is not a model output. Upload your own clip to try all eight genres. The pen button turns a text prompt (“swing”, “orchestral”, “bold techno”…) into a genre and strength. Mood shapes the tone as you listen.</p>
+          <p class="muted">Credits: Basic Pitch (Spotify, Apache-2.0) · Magenta.js (Google, Apache-2.0) · FluidR3_GM soundfont by Frank Wen (CC BY 3.0) via midi-js-soundfonts · lamejs (LGPL-3.0) · @tonejs/midi (MIT).</p>
           <p class="muted">Advanced AI · Group Project II: Exploring Style Transfer in Music Generation · IE University · 2026</p>
         </article>
       </section>
@@ -169,6 +171,14 @@
       <h2 class="sheet-title">Model</h2>
       <div class="model-pills" id="modelPills" role="radiogroup" aria-label="Model"></div>
       <p class="sheet-note" id="modelNote"></p>
+      <div class="downloads" id="downloads" hidden>
+        <h2 class="sheet-title">Download</h2>
+        <div class="model-pills">
+          <button type="button" class="pill" id="dlMp3" disabled>Styled MP3</button>
+          <button type="button" class="pill" id="dlMidi" disabled>Styled MIDI</button>
+          <button type="button" class="pill" id="dlSrc" disabled>Transcribed MIDI</button>
+        </div>
+      </div>
       <dl class="details desk-only">
         <div><dt>Track</dt><dd id="dTrack">—</dd></div>
         <div><dt>Mood</dt><dd id="dMood">Neutral</dd></div>
@@ -186,9 +196,9 @@
   <dialog class="dialog glass" id="promptDialog" aria-labelledby="promptTitle">
     <form method="dialog">
       <h2 id="promptTitle">Describe the style</h2>
-      <p class="dialog-sub">For example: “warm string quartet in a concert hall” or “gritty garage rock, live drums”.</p>
+      <p class="dialog-sub">For example: “string quartet in a concert hall”, “subtle lo-fi for studying” or “bold heavy metal”.</p>
       <textarea id="promptText" rows="3" maxlength="300" placeholder="Your style prompt…"></textarea>
-      <p class="dialog-hint">In live mode, prompts are sent to the model server. In this demo they are kept for this session.</p>
+      <p class="dialog-hint">Keywords pick the genre, the strength (subtle / bold) and the mood (dark / bright).</p>
       <div class="dialog-actions">
         <button class="btn btn-ghost" value="cancel" type="submit">Cancel</button>
         <button class="btn btn-primary" value="save" type="submit">Save prompt</button>
@@ -202,6 +212,13 @@
   <script src="js/synth.js"></script>
   <script src="js/player.js"></script>
   <script src="js/wheel.js"></script>
+  <script src="js/midi/analyse.js"></script>
+  <script src="js/midi/arranger.js"></script>
+  <script src="js/midi/genres.js"></script>
+  <script src="js/midi/models.js"></script>
+  <script src="js/midi/render.js"></script>
+  <script src="js/midi/export.js"></script>
+  <script src="js/midi/pipeline.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

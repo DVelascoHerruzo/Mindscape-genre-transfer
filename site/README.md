@@ -1,16 +1,17 @@
 # Mindscape: genre-transfer demo site
 
-A static website for the Advanced AI group project (Project II, music style transfer). Users pick a **genre** on a style wheel, set the **strength**, and switch between the original and the styled version while playback keeps its place.
+A static website for the Advanced AI group project (Project II, music style transfer). Users **upload an MP3**, pick one of **eight genres** on a style wheel, set the **strength**, and switch between the original and the styled version while playback keeps its place. The transformation runs **entirely in the browser** as **MP3 → MIDI → genre → MP3** with pretrained models (see [The MIDI pipeline](#the-midi-pipeline-transform-your-own-mp3)).
 
 - **Layout:** modelled on the Pocket Bard mobile app (now-playing pill, transport with a play orb, radial style wheel, sliders, bottom sheet).
 - **Look:** a "mindscape" of liquid-glass panels over slowly moving, audio-reactive lights. The colours follow what you hear:
   - **green & black** in the normal state (the original; the site starts here);
   - **black & white** for **Classical**;
-  - **red & black** for **Rock**.
+  - **red & black** for **Rock**;
+  - gold (Jazz), night blue (Ambient), lavender (Lo-fi), pink (Pop), cyan (Electronic) and molten orange (Metal) for the other genres.
 
   Themes are defined in `js/background.js` (`PALETTES`) and `js/app.js` (`GENRES`, `ORIGINAL_THEME`).
 
-It is plain HTML, CSS and JavaScript, with no build step and no dependencies. Fonts load from Google Fonts and fall back to system fonts offline.
+It is plain HTML, CSS and JavaScript, with no build step and nothing to install. The pipeline loads its models and instrument samples from public CDNs on first use (listed below). Fonts load from Google Fonts and fall back to system fonts offline.
 
 ## Layouts
 
@@ -29,9 +30,9 @@ The breakpoint is defined in two places that must match: `css/style.css` (`@medi
 
 ## Run it locally
 
-**Option A: double-click `index.html`.** It works from `file://`. The browser blocks reading `demo/manifest.json` that way, so the site falls back to its built-in demo track.
+**Option A: double-click `index.html`.** It works from `file://`, but the browser blocks reading `demo/manifest.json` and starting the transcription worker that way. The site falls back to its built-in demo track, and uploads only play as the original.
 
-**Option B (recommended): a local web server.** This reads the manifest too.
+**Option B (recommended): a local web server.** This reads the manifest and **transforms uploads**.
 
 ```powershell
 cd site
@@ -127,14 +128,50 @@ One-time setup in the repository settings:
 - **Settings → Environments → `github-pages`:** if *Deployment branches and tags* is restricted, add `prod`, or the deploy job is rejected.
 - *Optional:* a branch ruleset on `prod` that requires pull requests, so direct pushes are blocked rather than just not deployed.
 
-## Live mode (later, local only)
+## The MIDI pipeline: transform your own MP3
 
-Transforming *uploads* needs a model server on your own machine (planned: ACE-Step 1.5 behind a small FastAPI adapter). When it exists:
+Upload a clip with the button on the wheel, or with *Upload your own clip* in Tracks. Everything below runs in the browser, and the audio never leaves the device. Only the first 60 s are used. Clips with a clear melody and chords work best.
 
-- set `API_BASE` in `js/app.js` (e.g. `http://localhost:8000`);
-- the site will send uploads and the chosen genre, strength and prompt to it.
+| Step | What happens | Code | Model / library |
+|---|---|---|---|
+| 1. MP3 → MIDI | Decode, resample to 22.05 kHz mono, polyphonic transcription | `js/midi/pipeline.js`, `js/midi/transcribe-worker.js` (module worker) | **Basic Pitch** (Spotify, pretrained, Apache-2.0) on TensorFlow.js |
+| 2. Analyse | Spectral-flux onsets → tempo (autocorrelation) → beat tracking (dynamic programming) → downbeat; key (Krumhansl–Kessler); one chord per beat (triad templates + Viterbi); skyline melody | `js/midi/analyse.js` | our code |
+| 3. MIDI → genre | A recipe per genre writes new parts on the song's own beat grid: instruments, drum patterns, bass lines, voicings, swing, effects | `js/midi/arranger.js`, `js/midi/genres.js` | our code + **Magenta.js** (Google, pretrained, Apache-2.0) at *Bold* |
+| 4. MIDI → MP3 | Offline Web Audio render with soundfont samples, synthesised drums and genre effects, loudness-matched to the original; MP3 encoded on download | `js/midi/render.js`, `js/midi/export.js` | **FluidR3_GM** soundfont (CC BY 3.0) via midi-js-soundfonts; **lamejs** (LGPL-3.0); **@tonejs/midi** (MIT) |
 
-Until then, uploads play as the original only.
+**Strength presets:**
+- *Subtle* re-orchestrates every transcribed note on the genre's instruments.
+- *Balanced* keeps the melody and replaces the accompaniment (chords, bass, drums).
+- *Bold* adds the pretrained-model parts:
+
+| Genre | Bold adds |
+|---|---|
+| Classical | **Coconet** writes alto, tenor and bass under the melody (Bach chorale style) → string quartet |
+| Ambient | **Coconet** voices sung by a choir pad |
+| Jazz | **ImprovRNN** answers the melody in its gaps over the detected chords; **GrooVAE** humanises the swing groove; tenor sax lead |
+| Lo-fi | **GrooVAE** humanised drums, heavier tape and vinyl |
+| Pop, Electronic, Metal | **DrumsRNN** fills at phrase ends, extra layers (strings, arpeggiator, harmonised lead) |
+| Rock | **DrumsRNN** fills + **GrooVAE** groove, doubled guitars, organ |
+
+If Magenta cannot load (for example offline), Bold falls back to rule-based parts and the panel says so.
+
+**In the UI:**
+- The wheel centre shows progress: transcribing, the model at work, rendering.
+- Each genre × strength is rendered the first time it is chosen, then cached. A render takes about 2–4 s; the first Bold run also downloads its model.
+- The *Listen & compare* panel shows the detected key and tempo and the models used. It also has the downloads: **Styled MP3**, **Styled MIDI** and **Transcribed MIDI**.
+- The pen button maps a text prompt to a genre, strength and mood by keyword, for example "bold heavy metal", "subtle lo-fi" or "dark orchestral".
+
+**Measured on 2026-11-10** in headless Chrome, on a 22.5 s test clip (*Ode to Joy* synthesised with known tempo, key and chords):
+- Timings: transcription ≈ 9 s on WebGL. A Balanced render takes ≈ 2–3 s. A Bold render takes ≈ 3–6 s once its model is loaded; the first load takes 5–20 s.
+- Accuracy: the analysis recovered the tempo (96.0 vs 96 BPM), the key (G major), the downbeat, the chord progression (G–Em–C–D) and the melody note for note.
+
+**Console hook** (handy for demos and debugging):
+- `GTDebug.track.job.score` holds the analysis;
+- `GTDebug.track.job.get('jazz', 'bold').arrangement` holds the generated MIDI.
+
+## Live mode with a model server (optional, later)
+
+An audio-diffusion backend could still be added for comparison: set `API_BASE` in `js/app.js` to a local model server (e.g. ACE-Step behind FastAPI). The MIDI pipeline above does not need it.
 
 ## Files
 
@@ -147,7 +184,15 @@ Until then, uploads play as the original only.
 | `js/synth.js` | The browser-synth preview (three synced arrangements) |
 | `js/player.js` | Plays the synth or real files; crossfades and keeps position |
 | `js/wheel.js` | The SVG style wheel (genres, strength presets, centre A/B knob) |
-| `js/app.js` | State and UI wiring; `GENRES`, `PRESETS`, `MODELS`, `API_BASE` |
+| `js/app.js` | State and UI wiring; `GENRES`, `PRESETS`, `MODELS`, `API_BASE`; upload → pipeline, downloads, prompt keywords |
+| `js/midi/pipeline.js` | Runs the MIDI pipeline for each upload: decode, transcribe, analyse, render queue, exports |
+| `js/midi/transcribe-worker.js` | Basic Pitch transcription in a module worker |
+| `js/midi/analyse.js` | Tempo, beats, downbeat, key, chords, melody (also runs in Node) |
+| `js/midi/arranger.js` | Arrangement toolkit: beat grid, voicings, melody, drum patterns |
+| `js/midi/genres.js` | The eight genre recipes and their drum patterns |
+| `js/midi/models.js` | Magenta.js wrappers: Coconet, DrumsRNN, GrooVAE, ImprovRNN |
+| `js/midi/render.js` | Offline renderer: soundfont sampler, drum synth, effects |
+| `js/midi/export.js` | WAV, MP3 (lamejs) and MIDI (@tonejs/midi) files |
 | `demo/manifest.json` | List of demo tracks and their model outputs |
 
 **Accessibility:**
