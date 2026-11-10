@@ -8,22 +8,26 @@
   const API_BASE = null;
 
   // Outer ring order: calm genres on one side, loud on the other; Classical and Rock meet at the seam.
+  // Every genre has a recipe in js/midi/genres.js; colours pair with js/background.js PALETTES.
   const GENRES = [
     { id: 'classical', label: 'Classical', accent: '#f2f2f2', accent2: '#9a9a9a', palette: 'mono' }, // black & white
-    { id: 'jazz', label: 'Jazz', soon: true },
-    { id: 'ambient', label: 'Ambient', soon: true },
-    { id: 'lofi', label: 'Lo-fi', soon: true },
-    { id: 'pop', label: 'Pop', soon: true },
-    { id: 'electronic', label: 'Electronic', soon: true },
-    { id: 'metal', label: 'Metal', soon: true },
+    { id: 'jazz', label: 'Jazz', accent: '#ffc247', accent2: '#ffe3a3', palette: 'jazz' },
+    { id: 'ambient', label: 'Ambient', accent: '#5b8cff', accent2: '#b8ccff', palette: 'ambient' },
+    { id: 'lofi', label: 'Lo-fi', accent: '#b48cff', accent2: '#dccbff', palette: 'lofi' },
+    { id: 'pop', label: 'Pop', accent: '#ff4fa3', accent2: '#ffb3d6', palette: 'pop' },
+    { id: 'electronic', label: 'Electronic', accent: '#19e6ff', accent2: '#a6f6ff', palette: 'electronic' },
+    { id: 'metal', label: 'Metal', accent: '#ff7a1a', accent2: '#ffc08a', palette: 'metal' },
     { id: 'rock', label: 'Rock', accent: '#ff2a3d', accent2: '#ff8a8a', palette: 'rock' }, // red & black
   ];
+  // The built-in browser-synth preview only has these two arrangements.
+  const SYNTH_GENRES = ['classical', 'rock'];
   const PRESETS = [
     { id: 'subtle', label: 'Subtle', value: 0.25 },
     { id: 'balanced', label: 'Balanced', value: 0.55 },
     { id: 'bold', label: 'Bold', value: 0.85 },
   ];
   const MODELS = {
+    midi: { label: 'MIDI pipeline', short: 'MIDI', note: 'Basic Pitch transcribes the audio to MIDI, a genre arranger rewrites it (with Magenta Coconet, DrumsRNN, GrooVAE and ImprovRNN at Bold) and a soundfont sampler renders it back to audio, all in your browser.' },
     synth: { label: 'Browser preview', short: 'Preview', note: 'Synthesised live in your browser to show style switching. Not a model output.' },
     'ace-step': { label: 'ACE-Step 1.5 Cover', short: 'ACE-Step', note: 'Pre-trained diffusion transformer, Cover task. Strength sets how much of the original structure is kept.' },
     'ace-step-lora': { label: 'ACE-Step + LoRA', short: 'LoRA', note: 'Cover with our per-genre LoRA adapter (M2), fine-tuned on our classical and rock clips.' },
@@ -88,7 +92,12 @@
   }
   const hasStyled = (track) => modelsFor(track).length > 0;
   const moodLabel = (v) => (v < 0.34 ? 'Dark' : v > 0.66 ? 'Bright' : 'Neutral');
-  const playerState = () => ({ style: state.genre, strength: state.strength, preset: state.preset, ab: state.ab, model: state.model });
+  /* Pipeline uploads render each genre × strength on demand; until it is ready we keep playing the original. */
+  const styledPending = (track) => !!(track && track.job && !track.error && state.ab === 'styled' && !track.job.get(state.genre, state.preset));
+  const playerState = () => ({
+    style: state.genre, strength: state.strength, preset: state.preset, model: state.model,
+    ab: styledPending(currentTrack()) ? 'original' : state.ab,
+  });
   function setSlider(id, value) {
     const el = $(id);
     el.value = value;
@@ -141,8 +150,41 @@
     push();
   }
 
+  /* Ask the pipeline for the current genre × strength of an upload (no-op if done or queued). */
+  function requestStyled(track) {
+    if (!styledPending(track) || track.requested[state.genre + ':' + state.preset]) return;
+    const g = state.genre, p = state.preset, key = g + ':' + p;
+    track.requested[key] = true;
+    track.job.render(g, p, (stage, f) => {
+      track.stage = { label: stage, f };
+      if (track === currentTrack()) render();
+    }).then((out) => {
+      track.stage = null;
+      track.outputs.midi[g] = track.outputs.midi[g] || {};
+      track.outputs.midi[g][p] = out.url;
+      if (track !== currentTrack()) return;
+      if (state.genre === g && state.preset === p && state.ab === 'styled') {
+        push();
+        const a = out.arrangement;
+        toast(`${genreById(g).label} · ${presetById(p).label} ready${a.used.length ? ' · AI parts: ' + a.used.join(', ') : ''}`);
+      } else render();
+    }).catch((err) => {
+      delete track.requested[key];
+      track.stage = null;
+      if (!track.error) toast('Could not render this version: ' + err.message, 6000);
+      if (track === currentTrack()) render();
+    });
+  }
+
   /* Send the state to the player; fall back to the original if a styled file is missing. */
   function push() {
+    const track = currentTrack();
+    if (track && track.type === 'synth' && state.ab === 'styled' && !SYNTH_GENRES.includes(state.genre)) {
+      toast(`The built-in preview only has Classical and Rock. Upload an MP3 to hear it as ${genreById(state.genre).label}.`, 5200);
+      state.ab = 'original';
+      state.autoOriginal = true;
+    }
+    if (track && track.job) requestStyled(track);
     const r = window.GTPlayer.setState(playerState());
     if (r && !r.ok && r.reason) {
       toast(r.reason);
@@ -173,13 +215,24 @@
     const p = presetById(state.preset);
     const styled = state.ab === 'styled';
 
+    const pending = styledPending(track);
+    const busy = !!(track && track.job && track.stage && (track.analysing || pending));
+
     const theme = styled ? g : ORIGINAL_THEME;
     root.style.setProperty('--accent', theme.accent);
     root.style.setProperty('--accent-2', theme.accent2);
     if (window.GTBackground) window.GTBackground.setPalette(theme.palette);
-    wheel.setCenter(styled ? p.label.toUpperCase() : 'NOW HEARING', styled ? g.label : 'Original');
+    if (busy) {
+      const f = track.stage.f;
+      wheel.setCenter(track.stage.label.toUpperCase(), f > 0 && f < 1 ? Math.round(f * 100) + '%' : (pending ? g.label : '…'));
+    } else {
+      wheel.setCenter(styled ? p.label.toUpperCase() : 'NOW HEARING', styled ? g.label : 'Original');
+    }
+    app.classList.toggle('is-busy', busy);
 
-    $('npTrack').textContent = track ? `${track.title} — ${styled ? `${g.label} · ${p.label}` : 'Original'}` : '—';
+    $('npTrack').textContent = track
+      ? `${track.title} — ${styled ? `${g.label} · ${p.label}${pending ? ' (rendering…)' : ''}` : 'Original'}`
+      : '—';
     updateMarquee();
     $('strengthOut').textContent = `${nearestPreset(state.strength).label} · ${Math.round(state.strength * 100)}%`;
     $('abBtn').setAttribute('aria-pressed', String(!styled));
@@ -194,14 +247,18 @@
     document.querySelectorAll('#modelPills .pill').forEach((b) => {
       const on = available.includes(b.dataset.model);
       b.disabled = !on;
+      b.hidden = !on; // only models with outputs for this track are shown
       b.setAttribute('aria-checked', String(on && b.dataset.model === state.model));
     });
     const m = MODELS[state.model];
-    $('modelNote').textContent = available.length
-      ? (m ? m.note : '')
-      : (track && track.upload
-        ? 'No model outputs for uploads yet: live transforms need the local model server.'
-        : 'No model outputs listed for this track yet.');
+    $('modelNote').textContent = track && track.job
+      ? pipelineNote(track)
+      : available.length
+        ? (m ? m.note : '')
+        : (track && track.upload
+          ? 'This browser or page cannot run the in-browser pipeline, so the upload plays as the original.'
+          : 'No model outputs listed for this track yet.');
+    renderDownloads(track);
 
     // Desktop "Listen & compare" panel: stat tiles + details
     const pct = Math.round(state.strength * 100);
@@ -213,6 +270,47 @@
     $('dTrack').textContent = track ? track.title : '—';
     $('dMood').textContent = moodLabel(state.mood);
     $('dSource').textContent = track && track.license ? track.license : '—';
+  }
+
+  /* What the pipeline is doing / did for the current upload. */
+  function pipelineNote(track) {
+    const job = track.job;
+    if (track.error) return 'The pipeline stopped: ' + track.error;
+    if (track.analysing) {
+      const s = track.stage;
+      return `Step 1–2: ${s ? s.label : 'Starting'}${s && s.f > 0 && s.f < 1 ? ' ' + Math.round(s.f * 100) + '%' : ''}. Basic Pitch is transcribing your audio to MIDI in this browser.`;
+    }
+    const sc = job.score;
+    const facts = `${sc.key.name} · ${Math.round(sc.bpm)} BPM · ${sc.notes.length} notes transcribed${job.info.trimmed ? ` · first ${window.GTPipeline.MAX_SECONDS} s` : ''}.`;
+    if (state.ab !== 'styled') return `${facts} Pick a genre and strength to transform it.`;
+    const out = job.get(state.genre, state.preset);
+    if (!out) return `${facts} Step 3–4: ${track.stage ? track.stage.label : 'queued'}… (re-arranging as ${genreById(state.genre).label}, then rendering).`;
+    const a = out.arrangement;
+    const parts = a.used.length ? `Pretrained models in this version: ${a.used.join(', ')}.` : 'Rule-based genre arrangement.';
+    const fb = a.fallbacks.length ? ` Fallbacks: ${a.fallbacks.join('; ')}.` : '';
+    return `${facts} ${parts}${fb} Rendered in ${out.seconds.toFixed(1)} s.`;
+  }
+
+  function renderDownloads(track) {
+    const job = track && track.job && !track.error && !track.analysing ? track.job : null;
+    const out = job && state.ab === 'styled' ? job.get(state.genre, state.preset) : null;
+    $('dlMp3').disabled = !out;
+    $('dlMidi').disabled = !out;
+    $('dlSrc').disabled = !job;
+    $('downloads').hidden = !(track && track.job);
+  }
+  async function runDownload(btn, make, filename) {
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+    try {
+      window.GTExport.download(await make(), filename);
+    } catch (err) {
+      toast('Download failed: ' + err.message);
+    } finally {
+      btn.textContent = label;
+      render();
+    }
   }
 
   function buildModelPills() {
@@ -276,7 +374,9 @@
     list.textContent = '';
     state.tracks.forEach((t, i) => {
       const models = modelsFor(t);
-      const tags = t.upload ? ['Original only'] : models.map((m) => MODELS[m].short);
+      const tags = t.job
+        ? [t.error ? 'Error' : t.analysing ? 'Analysing…' : 'MIDI pipeline']
+        : t.upload ? ['Original only'] : models.map((m) => MODELS[m].short);
       list.appendChild(trackRow({
         title: t.title,
         sub: [t.artist, t.length].filter(Boolean).join(' · '),
@@ -293,7 +393,7 @@
     });
     list.appendChild(trackRow({
       title: 'Upload your own clip',
-      sub: 'MP3 / WAV, about 30 s, instrumental works best',
+      sub: 'MP3 / WAV, up to 60 s · transformed in your browser',
       tags: [],
       colors: ['#3a3a3a', '#0d0d0d'],
       icon: UPLOAD_ICON,
@@ -455,24 +555,78 @@
     }
     const old = state.tracks.findIndex((t) => t.upload);
     if (old >= 0) {
-      URL.revokeObjectURL(state.tracks[old].original);
+      const o = state.tracks[old];
+      URL.revokeObjectURL(o.fileUrl || o.original);
+      if (o.job) o.job.dispose();
       state.tracks.splice(old, 1);
     }
-    state.tracks.push({
-      id: 'upload',
+    const support = window.GTPipeline ? window.GTPipeline.supported() : { ok: false, reason: 'The pipeline scripts did not load.' };
+    const track = {
+      id: 'upload-' + Date.now(),
       type: 'file',
       upload: true,
       title: file.name.replace(/\.[^.]+$/, ''),
       artist: 'Your upload · stays in this browser',
       original: URL.createObjectURL(file),
-      outputs: {},
-      license: 'Your own file. It never leaves this browser.',
-    });
+      outputs: support.ok ? { midi: {} } : {},
+      license: 'Your own file. It never leaves this browser. Styled versions are AI-generated (MIDI pipeline).',
+      requested: {},
+    };
+    track.fileUrl = track.original;
+    state.tracks.push(track);
+    if (support.ok) startPipeline(track, file);
     loadTrack(state.tracks.length - 1);
     selectTab('style');
-    toast(API_BASE
-      ? 'Uploaded. Sending to the local model server…'
-      : 'Playing your original. Styled versions need the local model server (live mode).', 4600);
+    toast(support.ok
+      ? 'Transcribing your clip to MIDI in this browser… You can already pick a genre.'
+      : support.reason + ' Playing your original.', 5600);
+  });
+
+  function startPipeline(track, file) {
+    track.analysing = true;
+    track.stage = { label: 'Decoding', f: 0 };
+    track.job = window.GTPipeline.create(file, {
+      onProgress: (label, f) => {
+        track.stage = { label, f };
+        if (track === currentTrack()) render();
+      },
+    });
+    track.job.ready.then((score) => {
+      track.analysing = false;
+      track.stage = null;
+      track.original = track.job.originalUrl; // decoded copy: same length as the styled renders
+      track.length = Math.round(track.job.duration) + ' s';
+      if (!state.tracks.includes(track)) return;
+      renderTracks();
+      if (track !== currentTrack()) return;
+      toast(`Transcribed ${score.notes.length} notes · ${score.key.name} · ${Math.round(score.bpm)} BPM${track.job.info.trimmed ? ` · first ${window.GTPipeline.MAX_SECONDS} s` : ''}.`, 5200);
+      push();
+    }).catch((err) => {
+      track.analysing = false;
+      track.stage = null;
+      track.error = err.message;
+      track.outputs = {};
+      if (!state.tracks.includes(track)) return;
+      if (track === currentTrack()) {
+        state.ab = 'original';
+        toast(err.message + ' Playing your original.', 6000);
+        push();
+      }
+      renderTracks();
+    });
+  }
+
+  $('dlMp3').addEventListener('click', (e) => {
+    const t = currentTrack(), g = state.genre, p = state.preset;
+    runDownload(e.currentTarget, () => t.job.exportMp3(g, p), `${t.title} - ${genreById(g).label} ${presetById(p).label} (AI).mp3`);
+  });
+  $('dlMidi').addEventListener('click', (e) => {
+    const t = currentTrack(), g = state.genre, p = state.preset;
+    runDownload(e.currentTarget, () => t.job.exportMidi(g, p), `${t.title} - ${genreById(g).label} ${presetById(p).label}.mid`);
+  });
+  $('dlSrc').addEventListener('click', (e) => {
+    const t = currentTrack();
+    runDownload(e.currentTarget, () => t.job.exportSourceMidi(), `${t.title} - transcription.mid`);
   });
 
   const dialog = $('promptDialog');
@@ -488,8 +642,41 @@
   dialog.addEventListener('close', () => {
     if (dialog.returnValue !== 'save') return;
     state.prompt = $('promptText').value.trim();
-    toast(state.prompt ? 'Prompt saved. It is sent to the model in live mode.' : 'Prompt cleared.');
+    if (state.prompt) applyPrompt(state.prompt);
+    else toast('Prompt cleared.');
   });
+
+  /* Text prompt → genre, strength and mood by keywords (order matters: "heavy metal" before "rock"). */
+  const PROMPT_GENRES = [
+    ['metal', /metal|djent|thrash|double.?kick|headbang/],
+    ['lofi', /lo.?fi|study|chillhop|vinyl|tape|boom.?bap|hip.?hop|beats to/],
+    ['jazz', /jazz|swing|bebop|sax|lounge|walking bass|big band|blue note/],
+    ['electronic', /electr|edm|house|techno|dance|club|synth|trance|disco|rave/],
+    ['ambient', /ambient|dream|atmos|ethereal|space|drone|meditat|calm|float/],
+    ['classical', /classic|orchestr|string|quartet|baroque|bach|mozart|symphon|violin|chamber|choral/],
+    ['rock', /rock|guitar|grunge|punk|garage|indie|power.?chord|band/],
+    ['pop', /pop|radio|catchy|ballad|chart|upbeat|happy/],
+  ];
+  function applyPrompt(text) {
+    const t = text.toLowerCase();
+    const hit = PROMPT_GENRES.find(([, re]) => re.test(t));
+    const preset = /subtle|light|gentle|slight|faithful|a bit|a little|hint/.test(t) ? 'subtle'
+      : /bold|extreme|full|wild|totally|completely|radical|crazy|very|max/.test(t) ? 'bold' : null;
+    const mood = /dark|moody|sad|gloomy|night|melanchol/.test(t) ? 0.2 : /bright|sunny|shiny|cheer|joy/.test(t) ? 0.8 : null;
+    if (mood !== null) {
+      state.mood = mood;
+      setSlider('mood', Math.round(mood * 100));
+      window.GTAudio.setMood(mood);
+      $('moodOut').textContent = moodLabel(mood);
+    }
+    if (!hit) {
+      toast('No genre recognised in the prompt. Try words like "orchestral", "swing", "lo-fi", "techno" or "heavy metal".', 6000);
+      return;
+    }
+    if (preset) selectPreset(preset);
+    selectGenre(hit[0]);
+    toast(`Prompt → ${genreById(hit[0]).label} · ${presetById(state.preset).label}${mood !== null ? ' · ' + moodLabel(mood) : ''}`);
+  }
 
   $('infoBtn').addEventListener('click', () => {
     const t = currentTrack();
@@ -561,4 +748,7 @@
     if (q.get('sheet') === 'open') setSheet(true);
   }
   requestAnimationFrame(levelLoop);
+
+  // Console / test hook: inspect the current track, its pipeline job and the UI state.
+  window.GTDebug = { state, get track() { return currentTrack(); }, applyPrompt };
 })();

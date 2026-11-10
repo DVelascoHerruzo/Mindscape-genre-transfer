@@ -30,6 +30,36 @@
       lights: ['#ff1f3d', '#b3001b', '#ff4433', '#7a0010', '#e0002a', '#4d000a'],
       gain: 1,
     },
+    jazz: { // gold & black
+      base: ['#130d02', '#080501', '#000000'],
+      lights: ['#ffc247', '#c98a00', '#ffdb8a', '#7a5200', '#e6a400', '#4d3300'],
+      gain: 0.9,
+    },
+    ambient: { // night blue
+      base: ['#020814', '#010409', '#000000'],
+      lights: ['#5b8cff', '#2a4fd6', '#9fbaff', '#13307a', '#4a6fe0', '#0b1d4d'],
+      gain: 0.9,
+    },
+    lofi: { // lavender
+      base: ['#0d0614', '#060309', '#000000'],
+      lights: ['#b48cff', '#7a4fd6', '#dccbff', '#45267a', '#9a6ae6', '#2a144d'],
+      gain: 0.85,
+    },
+    pop: { // hot pink
+      base: ['#14020b', '#090105', '#000000'],
+      lights: ['#ff4fa3', '#d6006e', '#ff9ccb', '#7a003f', '#ff2b8a', '#4d0027'],
+      gain: 0.95,
+    },
+    electronic: { // electric cyan
+      base: ['#021214', '#010809', '#000000'],
+      lights: ['#19e6ff', '#00a3c2', '#8af2ff', '#005a6b', '#00c8e6', '#00343d'],
+      gain: 1,
+    },
+    metal: { // molten orange
+      base: ['#140802', '#090401', '#000000'],
+      lights: ['#ff7a1a', '#c24a00', '#ffb070', '#7a2c00', '#ff5e00', '#4d1a00'],
+      gain: 1,
+    },
   };
   const toRgb = (hex) => {
     const n = parseInt(hex.slice(1), 16);
