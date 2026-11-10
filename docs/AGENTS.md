@@ -16,7 +16,7 @@
   - primary model **ACE-Step 1.5 Cover**, backup Stable Audio 3;
   - **three trained models, all must-haves** (training plan in `docs/PLANNING_SUMMARY.md` §6b): **M1** mel-spectrogram AE + pretrained vocoder (designed and trained from scratch), **M2** LoRA per genre on the diffusion model, **M3** genre/style-embedding probe (frozen CLAP/MERT/MuQ + small classifier);
   - demo: **static site in `site/`** (local, GitHub-Pages-ready); a local live mode via a model server is a should-have;
-  - cut: RAVE, the symbolic route, deployment/auth.
+  - cut: RAVE, deployment/auth. *(The symbolic route was cut on 2026-11-09, but on 2026-11-10 the user adopted an **MP3 → MIDI → genre → MP3** architecture for the demo; see §4 and §9.)*
 - **What AI agents may touch (set by the user on 2026-11-09):**
   1. the literature review and planning docs (`docs/`, this file);
   2. **the web application**, only when the user asks to start it.
@@ -84,6 +84,7 @@ Ask the user before creating environments, installing packages or downloading mo
 **Current implementation: static demo site in `site/`.** It is the user's chosen direction: local hosting, GitHub-Pages style.
 
 - **Files:** `index.html`; `css/style.css`; `js/background.js` (animated lights), `js/audio-core.js` (shared Web Audio graph), `js/synth.js` (browser-synth preview), `js/player.js` (manifest-based player with crossfades), `js/wheel.js` (SVG style wheel), `js/app.js` (UI wiring); `demo/manifest.json`.
+- **Uploads are transformed in the browser by the MIDI pipeline** in `js/midi/` (user's architecture, 2026-11-10). Each upload goes through four stages: Basic Pitch transcription (module worker) → analysis (beats, key, chords, melody) → genre arranger (`genres.js` recipes, with Magenta Coconet / DrumsRNN / GrooVAE / ImprovRNN at Bold) → offline soundfont render. All 8 wheel genres are active. Renders are cached per genre × preset and plugged into the player as `outputs.midi[genre][preset]` blob URLs. Details: `site/README.md` § "The MIDI pipeline". Models and samples load from CDNs (jsDelivr, storage.googleapis.com, gleitz.github.io); the pipeline needs http(s), not `file://`.
 - **Design language** (user-specified):
   - layout modelled on the *Pocket Bard* app: now-playing pill, transport with a play orb, a radial style wheel (outer ring = genres, inner ring = strength presets), sliders, bottom sheet;
   - look: **"mindscape" liquid glass**: frosted translucent panels over slowly moving audio-reactive lights;
@@ -213,3 +214,16 @@ Nice-to-haves (history, sharing, deletion, roles, showcase, deployment, testing,
   - Why not `on: pull_request: types: [closed]`: those runs use the PR merge ref, which can clash with the `github-pages` environment's branch rules. Why not the `commits/{sha}/pulls` endpoint: it only finds merged PRs for commits on the default branch (`dev`).
   - Verified: the YAML parses (PyYAML); the gate script was dry-run against real API data. It found the PR for a real merge commit (actions/deploy-pages PR #440 with `base=main`), and it skipped with a notice for a fake SHA and for our repo (no PRs yet).
   - Docs updated: `site/README.md` (publish steps + one-time settings), `README.md`. Nothing committed or pushed; no GitHub settings changed.
+- **2026-11-10: in-browser MIDI pipeline demo** (user request: "MP3 to MIDI, MIDI changed to fit another genre, MIDI to MP3; pretrained models allowed; choose the genres").
+  - New `site/js/midi/`:
+    - `transcribe-worker.js`: Basic Pitch;
+    - `analyse.js`: tempo/beat DP, downbeat, Krumhansl–Kessler key, chords by templates + Viterbi, skyline melody;
+    - `arranger.js` + `genres.js`: 8 recipes; presets Subtle = re-orchestration, Balanced = melody + new accompaniment, Bold = + Magenta parts;
+    - `models.js`: Magenta wrappers; `render.js`: FluidR3_GM sampler + synth drums + effects; `export.js`: WAV/MP3/MIDI; `pipeline.js`: orchestration.
+  - `app.js`: all 8 genres enabled with palettes; upload → pipeline with progress in the wheel centre; downloads; prompt keywords → genre/strength/mood; `GTDebug` console hook. Model pills without outputs are hidden. `player.js` gained a `position` getter.
+  - Verified:
+    - `node --check` on all JS; a Node unit check of analysis + all 24 arrangements;
+    - headless Chrome 157 over CDP on a synthetic *Ode to Joy* (96 BPM, G major, G–Em–C–D). It recovered the tempo, key, downbeat, chords and melody exactly; all 8 genres × 3 presets rendered with the original's length, no NaNs, peaks ≤ −1 dBFS;
+    - Coconet, DrumsRNN, GrooVAE and ImprovRNN all ran; MP3 (192 kbps) and MIDI downloads are valid; A/B keeps the position; 0 console errors; `file://` falls back with a message.
+  - Not verified: musical quality by ear (needs a human listener).
+  - The plan documents (`PLANNING_SUMMARY.md`, the reviews) still describe the audio-diffusion plan and were not changed. Nothing committed.
